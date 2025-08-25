@@ -1,0 +1,36 @@
+# Subreddits to target (editable)
+subreddits:
+  - artificial
+  - MachineLearning
+  - Futurology
+  - technology
+  - cscareerquestions
+  - jobs
+  - careeradvice
+  - datascience
+
+# Case-insensitive keywords for initial (light) filtering
+keywords:
+  - "AI job"
+  - "AI jobs"
+  - "artificial intelligence job"
+  - "retraining"
+  - "reskilling"
+  - "upskilling"
+  - "layoff"
+  - "losing job"
+  - "automation"
+  - "future of work"
+  - "retirement"
+  - "career change"
+
+# Collection window (UTC). You can override via CLI --since/--until
+since: "2020-01-01"
+until: null
+
+# Comments collection
+fetch_comments: true
+max_comments_per_post: 300
+
+# Safety caps
+max_posts_per_subreddit: 5000
