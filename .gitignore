@@ -4,3 +4,4 @@ outputs
 images
 .env
 .idea/
+src/__pycache__

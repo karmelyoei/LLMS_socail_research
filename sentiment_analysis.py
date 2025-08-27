@@ -47,6 +47,8 @@ SAVE_FILE = "data/processed/predictions_grok.json"
 # Sentiment:
 # """
 
+
+
 FEW_SHOT_EXAMPLES = """
     Example 1:
     Comment: I'm terrified that AI will replace all programmers soon.
@@ -138,20 +140,22 @@ def load_or_run_grok4_few_shot(df, texts):
     return df
 
 
+
 def run_few_shot_llama3_local(texts):
-    # Download and run Llama-3-70B-Instruct locally with 4-bit quantization for GPU
-    model_id = "meta-llama/Meta-Llama-3-70B-Instruct"
+    model_id = "meta-llama/Meta-Llama-3-8B-Instruct"
+
     quantization_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_use_double_quant=True,
         bnb_4bit_quant_type="nf4",
         bnb_4bit_compute_dtype=torch.bfloat16
     )
+
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
         quantization_config=quantization_config,
-        device_map="auto"  # Auto-distribute across GPU(s)
+        device_map="auto"
     )
     predictions = []
     for text in texts:
@@ -170,7 +174,20 @@ def run_few_shot_llama3_local(texts):
 
     return predictions
 
+def run_few_shot_bart(texts):
+    classifier = pipeline("zero-shot-classification",
+                          model="facebook/bart-large-mnli",
+                          device=0)  # -1 = CPU
 
+    predictions = []
+    labels = ["fear", "anxiety", "hope"]
+    for text in texts:
+        res = classifier(text, candidate_labels=labels)
+        label = res["labels"][0]
+        predictions.append(label if label in EMOTIONS else 'unknown')
+        np.save("bart_prediction.npy", predictions)
+
+    return predictions
 
 class SimpleSentimentClassifier(nn.Module):
     def __init__(self, input_dim, num_classes=2):
@@ -264,7 +281,7 @@ def save_predictions(predictions):
 
 def prepare_pseudo_labels(df):
     # Use Llama-3 few-shot as pseudo-labels for fine-tuning (assuming it's good; you can switch)
-    df['pseudo_label'] = df['llama3_sentiment']
+    df['pseudo_label'] = df['bart_sentiment']
     df = df[df['pseudo_label'] != 'unknown'].reset_index(drop=True)  # Drop errors
     label_to_id = {emo: idx for idx, emo in enumerate(EMOTIONS)}
     df['label_id'] = df['pseudo_label'].map(label_to_id)
@@ -293,8 +310,11 @@ def fine_tune_roberta(train_dataset, test_dataset):
     else:
         print("Initializing RoBERTa for fine-tuning...")
         tokenizer = AutoTokenizer.from_pretrained("cardiffnlp/twitter-roberta-base-emotion")
-        model = AutoModelForSequenceClassification.from_pretrained("cardiffnlp/twitter-roberta-base-emotion",
-                                                                   num_labels=NUM_LABELS)
+        model = AutoModelForSequenceClassification.from_pretrained(
+            "cardiffnlp/twitter-roberta-base-emotion",
+            num_labels=NUM_LABELS,
+            ignore_mismatched_sizes=True  # <--- THIS FIX
+        )
 
     def tokenize(examples):
         return tokenizer(examples['text'], padding=True, truncation=True, max_length=512)
@@ -307,10 +327,7 @@ def fine_tune_roberta(train_dataset, test_dataset):
         num_train_epochs=3,
         per_device_train_batch_size=16,
         per_device_eval_batch_size=16,
-        evaluation_strategy="epoch",
         save_strategy="epoch",
-        load_best_model_at_end=True,
-        metric_for_best_model="accuracy",
         report_to="none"
     )
 
@@ -474,6 +491,37 @@ def normalize_label(value):
             value = value.split(":", 1)[1]  # take after 'sentiment:'
     return value
 
+
+def plot_label_distribution(df, label_col="pseudo_label", save_path="label_distribution.png"):
+    """
+    Count and plot the distribution of labels in a dataframe.
+
+    Args:
+        df (pd.DataFrame): dataframe containing labels
+        label_col (str): column name with labels (default = 'pseudo_label')
+        save_path (str): file name to save the plot
+    """
+    # Count samples per label
+    label_counts = df[label_col].value_counts().sort_index()
+
+    print("Label counts:")
+    for label, count in label_counts.items():
+        print(f"{label}: {count}")
+
+    # Plot
+    plt.figure(figsize=(6,4))
+    sns.barplot(x=label_counts.index, y=label_counts.values, palette="Set2")
+
+    plt.title("Label Distribution", fontsize=14)
+    plt.xlabel("Labels", fontsize=12)
+    plt.ylabel("Number of Samples", fontsize=12)
+    plt.tight_layout()
+
+    # Save and show
+    plt.savefig(save_path)
+    plt.show()
+    print(f"Plot saved to {save_path}")
+
 if __name__ == "__main__":
     # all data
     #file_path = "data/processed/comments_with_ai_job_risk.parquet"
@@ -504,12 +552,18 @@ if __name__ == "__main__":
         df = df.merge(preds_df, on="comment_id", how="left")
 
     print("Running Llama-3 few-shot (local)...")
-    df['llama3_sentiment'] = run_few_shot_llama3_local(texts)
-    #df['local_sentiment'] = run_sentiment_local(texts)
-    #run_sentiment_from_embeddings(r'C:\Users\karmel\Desktop\LLMS\reddit_collection_starter\reddit_collection_starter\data\processed\clip_text_embeddings.npy')
+    #df['llama3_sentiment'] = run_few_shot_llama3_local(texts)
+    texts = df['body'].tolist()
+    if os.path.exists("bart_sentiment.csv"):
+        df = pd.read_csv("bart_sentiment.csv")
+    else:
+        df['bart_sentiment'] = run_few_shot_bart(texts)
+        #df['local_sentiment'] = run_sentiment_local(texts)
+        #run_sentiment_from_embeddings(r'C:\Users\karmel\Desktop\LLMS\reddit_collection_starter\reddit_collection_starter\data\processed\clip_text_embeddings.npy')
+        df.to_csv("bart_sentiment.csv", index=False)
 
-    df.to_csv("llama3_sentiment.csv", index=False)
     df = prepare_pseudo_labels(df)
+    plot_label_distribution(df, label_col="pseudo_label")
     train_df, test_df, train_dataset, test_dataset = split_data(df)
 
     print("Fine-tuning RoBERTa...")
