@@ -1,21 +1,3 @@
-#!/usr/bin/env python3
-"""
-AI Job Risk Labeling from Reddit Comments using CLIP (text-only)
-----------------------------------------------------------------
-- Loads data from data/processed/comments_with_topics.parquet
-- Computes CLIP text embeddings
-- Scores each post by cosine similarity to an "AI job risk" prototype prompt
-- Adds binary label via threshold (configurable)
-- (Optional) uses weak ground-truth from a keyword heuristic or an existing column for evaluation
-- Plots histograms and threshold curves (PR / ROC if ground truth available)
-- Clustering baseline (KMeans, 2 clusters) with automatic label mapping
-
-Dependencies:
-  pip install pandas pyarrow torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-  pip install transformers scikit-learn matplotlib tqdm
-
-Note: Runs on CPU by default. Adjust BATCH_SIZE for speed/memory trade-offs.
-"""
 from __future__ import annotations
 
 import os

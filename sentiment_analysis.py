@@ -554,8 +554,8 @@ if __name__ == "__main__":
     print("Running Llama-3 few-shot (local)...")
     #df['llama3_sentiment'] = run_few_shot_llama3_local(texts)
     texts = df['body'].tolist()
-    if os.path.exists("bart_sentiment.csv"):
-        df = pd.read_csv("bart_sentiment.csv")
+    if os.path.exists("outputs/bart_sentiment.csv"):
+        df = pd.read_csv("outputs/bart_sentiment.csv")
     else:
         df['bart_sentiment'] = run_few_shot_bart(texts)
         #df['local_sentiment'] = run_sentiment_local(texts)

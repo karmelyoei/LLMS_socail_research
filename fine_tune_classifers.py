@@ -269,7 +269,7 @@ if __name__ == "__main__":
 
 
     # Plot PCA
-    #plot_labels_data(labeled_df)
+    plot_labels_data(labeled_df)
 
     # ---- Train MiniLM Classifier ----
     minilm_model = SentenceTransformer("all-MiniLM-L6-v2")

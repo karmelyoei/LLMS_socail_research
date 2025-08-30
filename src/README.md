@@ -64,20 +64,7 @@ reddit_collection_starter/
     └── raw/
 ```
 
-## Next steps
-After we collect, we’ll add a **semantic filtering** step (Sentence-Transformers) and then model pipelines for **topic discovery** and **sentiment/emotion** classification.
 
 
-
-# Sentiment Analysis Script for AI Job Risk Reddit Comments
-# Requirements: pip install pandas pyarrow requests groq transformers peft datasets torch scikit-learn matplotlib seaborn
-# Note: You need API keys for xAI (Grok-4) and Groq (Llama-3). Set them as environment variables or replace placeholders.
-# For xAI API: Get from https://x.ai/api
-# For Groq API: Get from https://console.groq.com/
-# Assumptions: Emotions are 'fear', 'anxiety', 'hope'. Add 'neutral' if needed.
-# Few-shot examples are made up; replace with real ones if available.
-# Data path: "data/processed/comments_with_ai_job_risk.parquet"
-# This script runs few-shot with Grok-4 and Llama-3, uses one for pseudo-labels, fine-tunes RoBERTa and Llama-3-8B with LoRA,
-# evaluates, compares, and visualizes.
 
 

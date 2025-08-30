@@ -128,8 +128,8 @@ def plot_learning_curves_from_trainer(trainer, save_path_prefix):
 def main():
     # load data
     df = pd.read_parquet("data/processed/data_train.parquet")
-    if os.path.exists("bart_sentiment.csv"):
-        temp = pd.read_csv("bart_sentiment.csv")
+    if os.path.exists("outputs/bart_sentiment.csv"):
+        temp = pd.read_csv("outputs/bart_sentiment.csv")
         if 'comment_id' in temp.columns and 'bart_sentiment' in temp.columns:
             df = df.merge(temp[['comment_id','bart_sentiment']], on='comment_id', how='left')
         else:
